@@ -52,9 +52,8 @@ with st.sidebar:
         help="Circuit depth. More = expressive but slower.")
     st.markdown("---")
     st.markdown("""
-    **Built by Bhargav**  
-    Data AI & Quantum Computing  
-    Platinum Business Services — 2025
+    **Built by Bhargav Sarvepalli**  
+    [bhargav.tech](https://bhargav.tech)
     
     **Stack:** Qiskit · scikit-learn · Streamlit
     """)
