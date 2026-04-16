@@ -41,22 +41,22 @@ Raw network connection (KDD Cup 99 row)
          │
          ├──────────────────────────────────────────────────────┐
          │  Classical path                    Quantum path      │
-         │                                                      │
-         ▼                                    ▼                 │
+         │                                                       │
+         ▼                                    ▼                  │
   RBF Kernel K(x,y)              ZZFeatureMap circuit           │
-  Classical SVM trains           encodes x → |φ(x)⟩             │
+  Classical SVM trains           encodes x → |φ(x)⟩            │
   on full 41 features            (2 features, 2 qubits)         │
-         │                                    │                 │
-         │                     FidelityQuantumKernel            │
-         │                     K(x,y) = |⟨φ(x)|φ(y)⟩|²           │
-         │                                    │                 │
-         │                     QSVC trains on quantum kernel    │
-         │                                    │                 │
-         └──────────────────┬─────────────────┘                 │
-                            │                                   │
-                            ▼                                   │
-                   Normal / Attack                              │
-                   classification                               │
+         │                                    │                  │
+         │                     FidelityQuantumKernel             │
+         │                     K(x,y) = |⟨φ(x)|φ(y)⟩|²         │
+         │                                    │                  │
+         │                     QSVC trains on quantum kernel     │
+         │                                    │                  │
+         └──────────────────┬─────────────────┘                  │
+                            │                                    │
+                            ▼                                    │
+                   Normal / Attack                               │
+                   classification                                │
 ```
 
 ---
@@ -155,6 +155,6 @@ SVM optimizer runs on a standard CPU. This makes it practical today.
 
 ## Author
 
-Bhargav — Data AI & Quantum Computing Intern candidate  
-Built as a portfolio project demonstrating quantum ML on a real-world
-cybersecurity dataset.
+**Bhargav Sarvepalli**  
+M.S. Computer Science, UMBC  
+[bhargav.tech](https://bhargav.tech) · [GitHub](https://github.com/Bhargav-Sarvepalli) · [LinkedIn](https://linkedin.com/in/bhargav-sarvepalli)
