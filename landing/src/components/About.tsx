@@ -24,7 +24,7 @@ const otherProjects = [
     name: 'Pulsar Star Detection',
     desc: 'ML microservice platform achieving 99% accuracy and ROC-AUC 0.973 on telescope data',
     stack: 'FastAPI · LightGBM · Docker · AWS EC2 · Streamlit · SHAP',
-    url: '#',
+    url: 'https://github.com/Bhargav-Sarvepalli/pulsar-star-prediction-service',
   },
 ]
 
