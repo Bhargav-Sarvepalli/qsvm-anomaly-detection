@@ -1,0 +1,40 @@
+{
+  "classical": {
+    "accuracy": 0.9925,
+    "confusion_matrix": [
+      [
+        196,
+        0
+      ],
+      [
+        3,
+        201
+      ]
+    ],
+    "n_support": 61
+  },
+  "quantum": {
+    "accuracy": 0.525,
+    "confusion_matrix": [
+      [
+        6,
+        19
+      ],
+      [
+        0,
+        15
+      ]
+    ],
+    "n_support": 124
+  },
+  "config": {
+    "n_classical_samples": 2000,
+    "n_quantum_samples": 200,
+    "n_features": 2,
+    "reps": 2,
+    "features_used": [
+      "src_bytes",
+      "dst_bytes"
+    ]
+  }
+}

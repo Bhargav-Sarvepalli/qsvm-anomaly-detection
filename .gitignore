@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -5,6 +6,16 @@ __pycache__/
 qsvm-env/
 *.egg-info/
 .DS_Store
-results/*.png
+
+# Data & results
 data/kddcup.data
-notebooks/
+results/*.png
+
+# Node / landing page
+landing/node_modules/
+landing/dist/
+landing/.env
+landing/.env.local
+
+# Keep cached quantum results
+!results/cached_results.json

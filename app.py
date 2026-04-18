@@ -44,8 +44,19 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-CACHE_PATH = os.path.join(os.path.dirname(__file__), "results", "cached_results.json")
 DATA_PATH  = os.path.join(os.path.dirname(__file__), "data", "kddcup.data")
+CACHE_PATH = os.path.join(os.path.dirname(__file__), "results", "cached_results.json")
+
+# ── Auto-download dataset if missing (Streamlit Cloud) ────────────────────────
+@st.cache_resource(show_spinner="Downloading dataset (first run only)...")
+def ensure_data():
+    if not os.path.exists(DATA_PATH):
+        from sklearn.datasets import fetch_kddcup99
+        df = fetch_kddcup99(subset=None, shuffle=True, random_state=42, as_frame=True).frame
+        os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
+        df.to_csv(DATA_PATH, index=False)
+
+ensure_data()
 
 def load_cache():
     if os.path.exists(CACHE_PATH):
@@ -57,11 +68,9 @@ def load_cache():
 with st.sidebar:
     st.markdown("### QSVM Detection")
     st.markdown("---")
-    page = st.radio("", ["Run Detection", "Model Comparison"], label_visibility="collapsed")
-    st.markdown("---")
     st.markdown("""
     <div style='font-size:0.78rem;color:#94a3b8;line-height:1.8;'>
-    <strong style='color:#1e293b;'>Sree Sai Bhargav Sarvepalli</strong><br>
+    <strong style='color:#e2e8f0;'>Sree Sai Bhargav Sarvepalli</strong><br>
     M.S. Computer Science, UMBC<br>
     <a href='https://bhargav.tech' style='color:#7c3aed;'>bhargav.tech</a>
     </div>
@@ -114,78 +123,74 @@ def bar_comparison(metrics):
     plt.tight_layout()
     return fig
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 1 — RUN DETECTION
-# ══════════════════════════════════════════════════════════════════════════════
-if page == "Run Detection":
-    st.title("Run Detection")
-    st.markdown("Classify network connections as normal or attack.")
+# ── Header ─────────────────────────────────────────────────────────────────────
+st.title("QSVM — Network Intrusion Detection")
+st.markdown("Classify network connections as normal or attack using classical or quantum SVM.")
+st.markdown("---")
 
-    # Data source
-    st.markdown("#### Data source")
+# ── Section 1: Run Detection ───────────────────────────────────────────────────
+st.markdown("## Run Detection")
+
+col_src, col_model = st.columns(2)
+with col_src:
+    st.markdown("**Data source**")
     source = st.radio("", ["Sample data", "Upload CSV"],
                       horizontal=True, label_visibility="collapsed")
-
-    df_input = None
-
-    if source == "Sample data":
-        st.markdown(
-            '<p class="note">300 balanced connections from KDD Cup 99 — 150 normal, 150 attack.</p>',
-            unsafe_allow_html=True
-        )
-        if os.path.exists(DATA_PATH):
-            from src.preprocess import load_data, encode_categoricals, binarize_labels
-            @st.cache_data(show_spinner=False)
-            def get_sample():
-                df = load_data(DATA_PATH)
-                df = encode_categoricals(df)
-                df = binarize_labels(df)
-                n = df[df["is_attack"]==0].sample(150, random_state=42)
-                a = df[df["is_attack"]==1].sample(150, random_state=42)
-                return pd.concat([n,a]).sample(frac=1,random_state=42).reset_index(drop=True)
-            df_input = get_sample()
-            vc = df_input["is_attack"].value_counts()
-            st.success(f"{len(df_input)} connections — {vc[0]} normal, {vc[1]} attack")
-        else:
-            st.error("Dataset not found. Use the upload option.")
-
-    else:
-        st.markdown("42 columns (41 KDD features + `is_attack`), values 0/1, max 500 rows, no missing values.")
-        uploaded = st.file_uploader("", type=["csv"], label_visibility="collapsed")
-        if uploaded:
-            try:
-                df_up = pd.read_csv(uploaded)
-                errors = []
-                if len(df_up) > 500:        errors.append("Max 500 rows.")
-                if "is_attack" not in df_up.columns: errors.append("Missing 'is_attack' column.")
-                if df_up.shape[1] != 42:    errors.append(f"Expected 42 columns, got {df_up.shape[1]}.")
-                if df_up.isnull().any().any(): errors.append("File has missing values.")
-                if errors:
-                    for e in errors: st.error(e)
-                else:
-                    df_input = df_up
-                    st.success(f"{len(df_input)} rows loaded.")
-            except Exception as e:
-                st.error(f"Could not read file: {e}")
-
-    if df_input is None:
-        st.stop()
-
-    # Model
-    st.markdown("#### Model")
+with col_model:
+    st.markdown("**Model**")
     model = st.radio("", ["Classical SVM", "Quantum SVM (pre-computed)"],
                      horizontal=True, label_visibility="collapsed")
-    if "Quantum" in model:
-        st.markdown(
-            '<p class="note">Quantum results are from a full 200-sample local run. '
-            'Live recomputation takes ~10 minutes on a simulator.</p>',
-            unsafe_allow_html=True
-        )
 
-    st.markdown("---")
-    if not st.button("Run", type="primary"):
-        st.stop()
+df_input = None
 
+if source == "Sample data":
+    st.markdown(
+        '<p class="note">300 balanced connections from KDD Cup 99 — 150 normal, 150 attack.</p>',
+        unsafe_allow_html=True
+    )
+    from src.preprocess import load_data, encode_categoricals, binarize_labels
+    @st.cache_data(show_spinner=False)
+    def get_sample():
+        df = load_data(DATA_PATH)
+        df = encode_categoricals(df)
+        df = binarize_labels(df)
+        n = df[df["is_attack"]==0].sample(150, random_state=42)
+        a = df[df["is_attack"]==1].sample(150, random_state=42)
+        return pd.concat([n,a]).sample(frac=1,random_state=42).reset_index(drop=True)
+    df_input = get_sample()
+    vc = df_input["is_attack"].value_counts()
+    st.success(f"{len(df_input)} connections loaded — {vc[0]} normal, {vc[1]} attack")
+
+else:
+    st.markdown("42 columns (41 KDD features + `is_attack`), values 0/1, max 500 rows, no missing values.")
+    uploaded = st.file_uploader("", type=["csv"], label_visibility="collapsed")
+    if uploaded:
+        try:
+            df_up = pd.read_csv(uploaded)
+            errors = []
+            if len(df_up) > 500:                  errors.append("Max 500 rows.")
+            if "is_attack" not in df_up.columns:  errors.append("Missing 'is_attack' column.")
+            if df_up.shape[1] != 42:              errors.append(f"Expected 42 columns, got {df_up.shape[1]}.")
+            if df_up.isnull().any().any():         errors.append("File has missing values.")
+            if errors:
+                for e in errors: st.error(e)
+            else:
+                df_input = df_up
+                st.success(f"{len(df_input)} rows loaded.")
+        except Exception as e:
+            st.error(f"Could not read file: {e}")
+
+if "Quantum" in model:
+    st.markdown(
+        '<p class="note">Quantum results are from a full 200-sample local run — '
+        'shown instantly. Live recomputation takes ~10 minutes on a simulator.</p>',
+        unsafe_allow_html=True
+    )
+
+st.markdown("")
+run = st.button("Run classifier", type="primary", disabled=(df_input is None and source == "Upload CSV"))
+
+if run and df_input is not None:
     X = df_input.drop(columns=["is_attack"]).values
     y = df_input["is_attack"].values
     X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
@@ -193,7 +198,6 @@ if page == "Run Detection":
     X_tr = scaler.fit_transform(X_tr)
     X_te  = scaler.transform(X_te)
 
-    # ── Classical ──────────────────────────────────────────────────────────────
     if model == "Classical SVM":
         with st.spinner("Training..."):
             clf = SVC(kernel="rbf", C=1.0, gamma="scale", probability=True, random_state=42)
@@ -210,17 +214,16 @@ if page == "Run Detection":
         fpr, tpr, _ = roc_curve(y_te, y_prob)
         rauc = auc(fpr, tpr)
 
-        st.markdown("### Classical SVM")
+        st.markdown("### Results — Classical SVM")
         st.markdown(
             f'<div class="metric-row">'
             f'<div class="metric-box"><div class="val">{acc*100:.1f}%</div><div class="lbl">Accuracy</div></div>'
             f'<div class="metric-box"><div class="val">{prec*100:.1f}%</div><div class="lbl">Precision</div></div>'
             f'<div class="metric-box"><div class="val">{rec*100:.1f}%</div><div class="lbl">Recall</div></div>'
-            f'<div class="metric-box"><div class="val">{f1*100:.1f}%</div><div class="lbl">F1 Score</div></div>'
+            f'<div class="metric-box"><div class="val">{f1*100:.1f}%</div><div class="lbl">F1</div></div>'
             f'<div class="metric-box"><div class="val">{rauc:.3f}</div><div class="lbl">ROC AUC</div></div>'
             f'</div>', unsafe_allow_html=True
         )
-
         col1, col2 = st.columns(2)
         with col1:
             fig = cm_plot(cm, "Confusion Matrix", "Blues")
@@ -230,13 +233,11 @@ if page == "Run Detection":
         with col2:
             fig = roc_plot(fpr, tpr, rauc, "#3b82f6")
             st.pyplot(fig); plt.close(fig)
-
         if fn == 0:
             st.success(f"Caught all {tp} attacks — zero missed.")
         else:
             st.warning(f"Missed {fn} attack(s) out of {tp+fn}.")
 
-    # ── Quantum ────────────────────────────────────────────────────────────────
     else:
         cache = load_cache()
         if not cache:
@@ -249,14 +250,12 @@ if page == "Run Detection":
         acc = q["accuracy"]
         cfg = cache.get("config", {})
 
-        st.markdown("### Quantum SVM")
+        st.markdown("### Results — Quantum SVM")
         st.markdown(
             f'<p class="note">'
             f'{cfg.get("n_quantum_samples","200")} samples · '
             f'2 features (src_bytes, dst_bytes) · '
-            f'ZZFeatureMap reps={cfg.get("reps",2)} · '
-            f'2 qubits · Hilbert space = 2² = 4 dimensions'
-            f'</p>',
+            f'ZZFeatureMap reps={cfg.get("reps",2)} · 2 qubits</p>',
             unsafe_allow_html=True
         )
         st.markdown(
@@ -268,7 +267,6 @@ if page == "Run Detection":
             f'<div class="metric-box"><div class="val">{q["n_support"]}</div><div class="lbl">Support vectors</div></div>'
             f'</div>', unsafe_allow_html=True
         )
-
         col1, col2 = st.columns(2)
         with col1:
             fig = cm_plot(cm, "Confusion Matrix", "Purples")
@@ -284,25 +282,25 @@ if page == "Run Detection":
                 language="text"
             )
             st.markdown(
-                '<p class="note">Accuracy gap vs classical = using 2 of 41 features, '
-                'not a quantum limitation. With 41 qubits the model operates in '
-                '2⁴¹-dimensional Hilbert space.</p>',
+                '<p class="note">Accuracy gap = using 2 of 41 features, not a quantum limitation. '
+                'With 41 qubits the model operates in 2⁴¹-dimensional Hilbert space.</p>',
                 unsafe_allow_html=True
             )
 
+# ── Section 2: Model Comparison ───────────────────────────────────────────────
+st.markdown("---")
+st.markdown("## Model Comparison")
+st.markdown("Classical SVM vs Quantum SVM — full pre-computed metrics.")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 2 — MODEL COMPARISON
-# ══════════════════════════════════════════════════════════════════════════════
-elif page == "Model Comparison":
-    st.title("Model Comparison")
-    st.markdown("Classical SVM vs Quantum SVM — full metrics.")
-
-    cache = load_cache()
-    if not cache:
-        st.warning("Run `python precompute_results.py` and commit `results/cached_results.json`.")
-        st.stop()
-
+cache = load_cache()
+if not cache:
+    st.markdown(
+        '<p class="note">Comparison requires cached results. '
+        'Run <code>python precompute_results.py</code> locally and commit '
+        '<code>results/cached_results.json</code>.</p>',
+        unsafe_allow_html=True
+    )
+else:
     c   = cache["classical"]
     q   = cache["quantum"]
     cfg = cache.get("config", {})
@@ -317,7 +315,6 @@ elif page == "Model Comparison":
     q_prec = safe(q_tp,q_tp+q_fp); q_rec = safe(q_tp,q_tp+q_fn)
     q_f1   = safe(2*q_prec*q_rec, q_prec+q_rec)
 
-    # Summary
     col1, col2 = st.columns(2)
     with col1:
         st.markdown(f"**Classical SVM** — 41 features, {cfg.get('n_classical_samples',2000)} samples")
@@ -338,9 +335,6 @@ elif page == "Model Comparison":
             f'</div>', unsafe_allow_html=True
         )
 
-    st.markdown("---")
-
-    # Bar chart + table
     col1, col2 = st.columns([1.4, 1])
     with col1:
         metrics = {
@@ -376,9 +370,6 @@ elif page == "Model Comparison":
             unsafe_allow_html=True
         )
 
-    st.markdown("---")
-
-    # Confusion matrices
     col1, col2 = st.columns(2)
     with col1:
         fig = cm_plot(c_cm, "Classical SVM", "Blues")
@@ -392,11 +383,8 @@ elif page == "Model Comparison":
                     unsafe_allow_html=True)
 
     st.markdown(
-        f'<p class="note" style="margin-top:1rem;">'
-        f'The {(c["accuracy"]-q["accuracy"])*100:.1f}% gap reflects using 2 of 41 features '
-        f'— not a quantum limitation. With 41 qubits on real hardware the model operates '
-        f'in 2⁴¹-dimensional Hilbert space, impossible to replicate classically.'
-        f'</p>',
+        f'<p class="note">The {(c["accuracy"]-q["accuracy"])*100:.1f}% gap reflects '
+        f'using 2 of 41 features — not a quantum limitation.</p>',
         unsafe_allow_html=True
     )
 
@@ -404,7 +392,7 @@ elif page == "Model Comparison":
         st.markdown(
             "**Simulation, not hardware.** Statevector simulator — real devices introduce noise.  \n"
             "**Small quantum training set.** 200 samples vs 2000 classical.  \n"
-            "**KDD Cup 99 is dated.** 1999 data — don't extrapolate to modern threats without retraining."
+            "**KDD Cup 99 is dated.** 1999 data — retrain before applying to modern threats."
         )
 
 # ── Footer ─────────────────────────────────────────────────────────────────────
